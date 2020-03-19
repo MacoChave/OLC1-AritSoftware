@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="jflex-1.6.1">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/src/grammar/ascendent/Lexico/jflex-1.6.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,0 +1,174 @@
+package Sintactico;
+import java_cup.runtime.*;
+
+parser code 
+{:
+    public void syntax_error (Symbol s) {
+        System.err.println("Error sintáctico en la línea " + s.left + " columna " + s.right + ". No se esperaba: " + s.value);
+    }
+
+    public void unrecovered_syntax_error (Symbol s) thrwos java.lang.Exception {
+        System.err.println("Error sintáctico en la línea " + s.left + " columna " + s.right + ". No se esperaba: " + s.value);
+    }
+:}
+
+/* **************************************************
+ * TERMINALES 
+ * ***************************************************/ 
+terminal ntString, ntNumber, ntDouble, ntId, ntTrue, ntFalse;
+terminal ntIf, ntElse, ntSwitch, ntCase, ntDefault, ntWhile, ntDo, ntFor;
+terminal ntNull, ntIn, ntBreak, ntContinue, ntReturn, ntFunction;
+// terminal print, c, typeof, length, ncol, nrow;
+// terminal stringlength, remove, tolowercase, touppercase, trunk, round;
+// terminal mean, mode, median, list, matrix, array, pie, barplot, plot, hist;
+terminal ntOcrotches, ntCcrotches, ntOparentheses, ntCparentheses, ntObraces, ntCbraces;
+terminal ntNot, ntPlus, ntMinus, ntUminus, ntTimes, ntDivided, ntMod, ntPot; 
+terminal ntLess, ntLesseq, ntGreater, ntGreatereq, ntEqual, ntNotequal, ntAnd, ntOr;
+terminal ntCquestion, ntColon, ntSemicolon, ntComma, ntPoint;
+
+/* **************************************************
+ * NO TERMINALES 
+ * ***************************************************/ 
+non terminal BEGIN;
+non terminal LIST_SENT, SENT, END_LINE;
+non terminal VARIABLE, TYPE_VARIABLE, DETAIL_VARIABLE, TERNARY;
+non terminal LIST_PARAMETER, PARAMETER, ASSIGN_PARAMETER;
+non terminal EXPRESSION;
+// non terminal ARITHMETIC, LOGIC, RELATINAL, BASIC;
+non terminal INVOKE, TYPE_INVOKE, LIST_ARG, ARG;
+non terminal SENT_IF, SENT_ELSE, SENT_SWITCH, LIST_CASE, CASE_DEFAULT, SENT_WHILE, SENT_DO, SENT_FOR;
+non terminal RETURN;
+
+/* **************************************************
+ * PRECEDENCIA Y ASOCIATIVIDAD 
+ * ***************************************************/ 
+precedence left ntOr;
+precedence left ntAnd;
+precedence right ntNot;
+precedence left ntLess, ntGreater, ntLesseq, ntGreatereq, ntEqual, ntNotequal;
+precedence left ntPlus, ntMinus;
+precedence left ntTimes, ntDivided, ntMod, ntPot;
+precedence right ntUminus;
+
+/* **************************************************
+ * PRODUCCIÓN INICIAL 
+ * ***************************************************/
+ start with BEGIN;
+
+/* **************************************************
+ * PRODUCCIONES 
+ * ***************************************************/
+/* INICIO */
+BEGIN                   ::= LIST_SENT;
+
+/* SENTENCIAS */
+LIST_SENT               ::= LIST_SENT SENT END_LINE 
+                          | SENT END_LINE;
+
+END_LINE                ::= ntSemicolon 
+                          | ;
+
+SENT                    ::= VARIABLE; 
+                        //   | TYPE_VARIABLE 
+                        //   | INVOKE
+                        //   | SENT_IF
+                        //   | SENT_SWITCH 
+                        //   | SENT_WHILE 
+                        //   | SENT_DO 
+                        //   | SENT_FOR
+                        //   | RETURN 
+                        //   | ntBreak 
+                        //   | ntContinue;
+
+/* VARIABLES */
+VARIABLE                ::= ntId ntEqual TYPE_VARIABLE; 
+
+TYPE_VARIABLE           ::= EXPRESSION DETAIL_VARIABLE
+                          | ntFunction ntOparentheses LIST_PARAMETER ntCparentheses ntObraces LIST_SENT ntCbraces;
+
+DETAIL_VARIABLE         ::= TERNARY
+                          | ntOparentheses LIST_PARAMETER ntCparentheses ntObraces LIST_SENT ntCbraces;
+
+/* OPERADOR TERNARIO */
+TERNARY                 ::= ntCquestion EXPRESSION ntColon EXPRESSION
+                          | ;
+
+/* FUNCION */
+LIST_PARAMETER          ::= LIST_PARAMETER ntComma PARAMETER 
+                          | PARAMETER;
+
+PARAMETER               ::= ntId ASSIGN_PARAMETER;
+
+ASSIGN_PARAMETER        ::= ntEqual EXPRESSION
+                         | ;
+
+/* EXPRESION */
+// EXPRESSION              ::= RELATINAL 
+//                           | INVOKE 
+//                           | ntOparentheses EXPRESSION ntCparentheses;
+
+/* RELACIONALES */
+EXPRESSION              ::= EXPRESSION ntPlus EXPRESSION
+                          | EXPRESSION ntMinus EXPRESSION 
+                          | EXPRESSION ntTimes EXPRESSION 
+                          | EXPRESSION ntDivided EXPRESSION 
+                          | EXPRESSION ntMod EXPRESSION 
+                          | EXPRESSION ntPot EXPRESSION 
+                          | EXPRESSION ntLess EXPRESSION 
+                          | EXPRESSION ntGreater EXPRESSION 
+                          | EXPRESSION ntLesseq EXPRESSION 
+                          | EXPRESSION ntGreatereq EXPRESSION
+                          | EXPRESSION ntEqual EXPRESSION 
+                          | EXPRESSION ntNotequal EXPRESSION 
+                          | EXPRESSION ntOr EXPRESSION 
+                          | EXPRESSION ntAnd EXPRESSION 
+                          | ntNot EXPRESSION
+                          | ntMinus EXPRESSION %prec ntUminus
+                          | ntId INVOKE
+                          | ntNumber 
+                          | ntString 
+                          | ntDouble 
+                          | ntTrue 
+                          | ntFalse;
+
+/* BASICOS */
+// BASIC                   ::= number 
+//                           | string 
+//                           | double
+//                           | true 
+//                           | false;
+
+/* LLAMADA A FUNCIÓN */
+// INVOKE                  ::= ntId TYPE_INVOKE;
+
+TYPE_INVOKE             ::= ntOparentheses LIST_ARG ntCparentheses
+                          | ;
+
+LIST_ARG                ::= LIST_ARG ntComma ARG
+                          | ARG;
+
+ARG                     ::= EXPRESSION
+                          | ntDefault;
+
+// /* IF */
+// SENT_IF                 ::= ntIf ntOparentheses EXPRESSION ntCparentheses ntObraces ntCbraces SENT_ELSE;
+
+// SENT_ELSE               ::= ntElse SENT_IF 
+//                           | ntObraces LIST_SENT ntCbraces
+//                           | ;
+
+// /* SWITCH */
+// SENT_SWITCH             ::= ntSwitch ntOparentheses EXPRESSION ntCparentheses LIST_CASE CASE_DEFAULT;
+
+// LIST_CASE               ::= ntCase EXPRESSION ntColon LIST_SENT;
+
+// CASE_DEFAULT            ::= ntDefault ntColon LIST_SENT;
+
+// /* WHILE */
+// SENT_WHILE              ::= ntWhile ntOparentheses EXPRESSION ntCparentheses ntObraces LIST_SENT ntCbraces;
+
+// /* DO */
+// SENT_DO                 ::= ntDo ntObraces LIST_SENT ntCbraces while ntObraces EXPRESSION ntCbraces;
+
+// /* FOR */
+// SENT_FOR                ::= ntFor ntOparentheses ntId ntIn EXPRESSION ntCparentheses ntObraces LIST_SENT ntCbraces;

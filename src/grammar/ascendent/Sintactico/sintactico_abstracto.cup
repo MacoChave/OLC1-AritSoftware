@@ -1,0 +1,279 @@
+package grammar.ascendent.Sintactico;
+import java_cup.runtime.*;
+import java.util.LinkedList;
+import ast.*;
+
+// -expect,1
+
+parser code 
+{:
+    public LinkedList<Instruction> ast;
+
+    public void syntax_error (Symbol s) {
+        System.err.println("Error sintáctico en la línea " + s.left + " columna " + s.right + ". No se esperaba: " + s.value);
+    }
+
+    public void unrecovered_syntax_error (Symbol s) throws Exception {
+        System.err.println("Error sintáctico en la línea " + s.left + " columna " + s.right + ". No se esperaba: " + s.value);
+    }
+
+    public LinkedList<Instruction> getAST() { return ast; }
+:}
+
+/* **************************************************
+ * TERMINALES 
+ * ***************************************************/ 
+terminal String NT_STRING, NT_NUMBER, NT_DOUBLE, NT_ID, NT_TRUE, NT_FALSE;
+terminal String NT_IF, NT_ELSE, NT_SWITCH, NT_CASE, NT_DEFAULT, NT_WHILE, NT_DO, NT_FOR;
+terminal String NT_NULL, NT_IN, NT_BREAK, NT_CONTINUE, NT_RETURN, NT_FUNCTION;
+terminal String NT_DBO_CROTCHES, NT_DBC_CROTCHES;
+terminal String NT_O_CROTCHES, NT_C_CROTCHES, NT_O_PARENTHESES, NT_C_PARENTHESES, NT_O_BRACES, NT_C_BRACES;
+terminal String NT_NOT, NT_PLUS, NT_MINUS, NT_UMINUS, NT_TIMES, NT_DIVIDED, NT_MOD, NT_POT; 
+terminal String NT_LESS, NT_LESSQ, NT_GREATER, NT_GREATERQ, NT_EQUAL, NT_NOT_EQUAL, NT_AND, NT_OR;
+terminal String NT_ASSIGN, NT_C_QUESTION, NT_COLON, NT_SEMICOLON, NT_COMMA, NT_JUMPLINE, NT_ARROW;
+
+/* **************************************************
+ * NO TERMINALES 
+ * ***************************************************/ 
+non terminal begin;
+non terminal LinkedList<Instruction> list_sent;
+non terminal Instruction sent;
+non terminal Operation expresion;
+non terminal Declaration declaracion;
+non terminal asignacion;
+non terminal SentIf sent_if;
+non terminal LinkedList<SubIf> list_elseif;
+non terminal SubIf sent_else, sent_elsif;
+non terminal SentWhile sent_while;
+non terminal SentDo sent_do;
+non terminal SentFor sent_for;
+non terminal SentSwitch sent_switch;
+non terminal SubSwitch list_case, case_default;
+non terminal variable, tipo_variable;
+non terminal list_E;
+non terminal acceso, vecs, list_vec, vec;
+non terminal params, list_param, param, asigna_param;
+non terminal invocar, args, list_arg, arg;
+non terminal end_line;
+non terminal return;
+
+/* **************************************************
+ * PRECEDENCIA Y ASOCIATIVIDAD 
+ * ***************************************************/ 
+precedence left NT_OR;
+precedence left NT_AND;
+precedence right NT_NOT;
+precedence left NT_LESS, NT_GREATER, NT_LESSQ, NT_GREATERQ, NT_EQUAL, NT_NOT_EQUAL;
+precedence left NT_PLUS, NT_MINUS;
+precedence left NT_TIMES, NT_DIVIDED, NT_MOD, NT_POT;
+precedence right NT_UMINUS;
+
+precedence left NT_O_PARENTHESES, NT_C_PARENTHESES;
+
+/* **************************************************
+ * PRODUCCIÓN INICIAL 
+ * ***************************************************/
+ start with begin;
+
+/* **************************************************
+ * PRODUCCIONES 
+ * ***************************************************/
+/* INICIO */
+begin                   ::= list_sent;
+
+/* SENTENCIAS */
+list_sent               ::= list_sent sent end_line 
+                          | sent end_line;
+
+end_line                ::= NT_SEMICOLON 
+                          | NT_JUMPLINE;
+
+sent                    ::= variable
+                          | sent_if
+                          | sent_switch 
+                          | sent_while 
+                          | sent_do 
+                          | sent_for
+                          | NT_RETURN return 
+                          | NT_BREAK 
+                          | NT_CONTINUE;
+
+/* VARIABLE */
+variable                ::= declaracion 
+                          | asignacion;
+
+/* DECLARACION */
+declaracion             ::= NT_ID NT_ASSIGN expresion 
+                          | NT_ID NT_ASSIGN expresion NT_C_QUESTION expresion NT_COLON expresion 
+                          | NT_ID NT_ASSIGN NT_ID NT_O_PARENTHESES list_E NT_C_PARENTHESES 
+                          | NT_ID NT_ASSIGN NT_FUNCTION NT_O_PARENTHESES params NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES
+                          | NT_ID NT_ASSIGN NT_O_PARENTHESES expresion NT_COMMA NT_ID NT_O_PARENTHESES list_E NT_C_PARENTHESES NT_C_PARENTHESES 
+                          | NT_ID NT_ASSIGN NT_O_PARENTHESES params NT_C_PARENTHESES NT_ARROW NT_O_BRACES list_sent NT_C_BRACES;
+
+/* asignacion */
+asignacion              ::= acceso NT_ASSIGN expresion;
+
+/* acceso */
+acceso                  ::= NT_ID list_vec 
+                          | NT_ID NT_DBO_CROTCHES expresion NT_DBC_CROTCHES 
+                          | NT_ID NT_O_CROTCHES NT_COMMA expresion NT_C_CROTCHES 
+                          | NT_ID NT_O_CROTCHES expresion NT_COMMA NT_C_CROTCHES 
+                          | NT_ID NT_O_CROTCHES expresion NT_COMMA expresion NT_C_CROTCHES;
+
+list_E                  ::= list_E NT_COMMA expresion 
+                          | expresion;
+
+params                  ::= list_param  
+                          | ;
+
+list_param              ::= list_param NT_COMMA param
+                          | param;
+
+param                   ::= expresion asigna_param;
+
+asigna_param            ::= NT_ASSIGN expresion 
+                          | ;
+
+list_vec                ::= list_vec vec 
+                          | vec; 
+
+vec                     ::= NT_O_CROTCHES expresion NT_C_CROTCHES 
+                          | NT_DBO_CROTCHES expresion NT_DBC_CROTCHES;
+
+/* EXPRESSION */
+expresion              ::= expresion:a NT_PLUS expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.SUMA, a, b);
+                            :}    
+                          | expresion:a NT_MINUS expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.RESTA, a, b);
+                            :}    
+                          | expresion:a NT_TIMES expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.MULTIPLICACION, a, b);
+                            :}    
+                          | expresion:a NT_DIVIDED expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.DIVISION, a, b);
+                            :}    
+                          | expresion:a NT_MOD expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.MODULO, a, b);
+                            :}    
+                          | expresion:a NT_POT expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.POTENCIA, a, b);
+                            :}    
+                          | expresion:a NT_LESS expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.MENOR, a, b);
+                            :}    
+                          | expresion:a NT_GREATER expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.MAYOR, a, b);
+                            :}    
+                          | expresion:a NT_LESSQ expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.MENOR_IGUAL, a, b);
+                            :}    
+                          | expresion:a NT_GREATERQ expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.MAYOR_IGUAL, a, b);
+                            :}    
+                          | expresion:a NT_EQUAL expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.IGUAL, a, b);
+                            :}    
+                          | expresion:a NT_NOT_EQUAL expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.DIFERENTE, a, b);
+                            :}    
+                          | expresion:a NT_OR expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.OR, a, b);
+                            :}    
+                          | expresion:a NT_AND expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.AND, a, b);
+                            :}    
+                          | NT_NOT expresion:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.NOT, a);
+                            :}
+                          | NT_MINUS expresion:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.NEGATIVO, a);
+                            :} %prec NT_UMINUS
+                          | NT_ID 
+                          | NT_ID invocar 
+                          | acceso 
+                          | NT_NUMBER:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.NUMERO, a);
+                            :} 
+                          | NT_STRING:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.CADENA, a);
+                            :} 
+                          | NT_DOUBLE:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.DECIMAL, a);
+                            :} 
+                          | NT_TRUE:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.TRUE, true);
+                            :} 
+                          | NT_FALSE:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.FALSE, false);
+                            :}
+                          | NT_NULL 
+                            {:
+                                RESULT = new Operation(Operation.Type.NULL, null);
+                            :};
+
+/* INVOCAR */
+invocar                 ::= NT_O_PARENTHESES args NT_C_PARENTHESES;
+
+args                    ::= list_arg  
+                          | ;
+
+list_arg                ::= list_arg NT_COMMA arg
+                          | arg;
+
+arg                     ::= expresion
+                          | NT_DEFAULT;
+
+/* IF */
+sent_if                 ::= NT_IF NT_O_PARENTHESES expresion NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES 
+                          | NT_IF NT_O_PARENTHESES expresion NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES list_elseif 
+                          | NT_IF NT_O_PARENTHESES expresion NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES list_elseif sent_else 
+                          | NT_IF NT_O_PARENTHESES expresion NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES sent_else;
+
+list_elseif             ::= list_elseif sent_elsif 
+                          | sent_elsif;
+
+sent_elsif              ::= NT_ELSE NT_IF NT_O_PARENTHESES expresion NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES;
+
+sent_else               ::= NT_ELSE NT_O_BRACES list_sent NT_C_BRACES;
+
+/* SWITCH */
+sent_switch             ::= NT_SWITCH NT_O_PARENTHESES expresion NT_C_PARENTHESES list_case case_default;
+
+list_case               ::= NT_CASE expresion NT_COLON list_sent;
+
+case_default            ::= NT_DEFAULT NT_COLON list_sent;
+
+/* WHILE */
+sent_while              ::= NT_WHILE NT_O_PARENTHESES expresion NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES;
+
+/* DO */
+sent_do                 ::= NT_DO NT_O_BRACES list_sent NT_C_BRACES NT_WHILE NT_O_BRACES expresion NT_C_BRACES;
+
+/* FOR */
+sent_for                ::= NT_FOR NT_O_PARENTHESES NT_ID NT_IN expresion NT_C_PARENTHESES NT_O_BRACES list_sent NT_C_BRACES;
+
+/* RETURN */
+return                  ::= expresion 
+                          | ;

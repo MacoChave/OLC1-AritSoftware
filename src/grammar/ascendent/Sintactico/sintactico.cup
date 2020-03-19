@@ -1,0 +1,529 @@
+package grammar.ascendent.Sintactico;
+import java_cup.runtime.*;
+import java.util.LinkedList;
+import ast.*;
+
+// -expect,1
+
+parser code 
+{:
+    public LinkedList<Instruction> ast;
+
+    public void syntax_error (Symbol s) {
+        System.err.println("Error sintáctico en la línea " + s.left + " columna " + s.right + ". No se esperaba: " + s.value);
+    }
+
+    public void unrecovered_syntax_error (Symbol s) throws Exception {
+        System.err.println("Error sintáctico en la línea " + s.left + " columna " + s.right + ". No se esperaba: " + s.value);
+    }
+
+    public LinkedList<Instruction> getAST() { return ast; }
+:}
+
+/* **************************************************
+ * TERMINALES 
+ * ***************************************************/ 
+terminal String NT_STRING, NT_NUMBER, NT_DOUBLE, NT_ID, NT_TRUE, NT_FALSE;
+terminal String NT_IF, NT_ELSE, NT_SWITCH, NT_CASE, NT_DEFAULT, NT_WHILE, NT_DO, NT_FOR;
+terminal String NT_NULL, NT_IN, NT_BREAK, NT_CONTINUE, NT_RETURN, NT_FUNCTION;
+terminal String NT_DBO_CROTCHES, NT_DBC_CROTCHES;
+terminal String NT_O_CROTCHES, NT_C_CROTCHES, NT_O_PARENTHESES, NT_C_PARENTHESES, NT_O_BRACES, NT_C_BRACES;
+terminal String NT_NOT, NT_PLUS, NT_MINUS, NT_UMINUS, NT_TIMES, NT_DIVIDED, NT_MOD, NT_POT; 
+terminal String NT_LESS, NT_LESSQ, NT_GREATER, NT_GREATERQ, NT_EQUAL, NT_NOT_EQUAL, NT_AND, NT_OR;
+terminal String NT_ASSIGN, NT_C_QUESTION, NT_COLON, NT_SEMICOLON, NT_COMMA, NT_JUMPLINE, NT_ARROW;
+
+/* **************************************************
+ * NO TERMINALES 
+ * ***************************************************/ 
+non terminal begin;
+non terminal LinkedList<Instruction> list_sent;
+non terminal Instruction sent;
+non terminal Operation expresion;
+non terminal Declaration declaracion;
+non terminal Assign asignacion;
+non terminal SentIf sent_if;
+non terminal LinkedList<SubIf> list_elseif;
+non terminal SubIf sent_else, sent_elseif;
+non terminal SentWhile sent_while;
+non terminal SentDo sent_do;
+non terminal SentFor sent_for;
+non terminal SentSwitch sent_switch;
+non terminal SubSwitch list_case, case_default;
+non terminal variable, tipo_declaracion;
+non terminal dec_e, list_e;
+non terminal acceso, acceso_e, acceso_coma, vecs, list_vec, vec;
+non terminal params, list_param, param, asignar_param;
+non terminal invocar, args, list_arg, arg;
+non terminal endline;
+non terminal return;
+
+/* **************************************************
+ * PRECEDENCIA Y ASOCIATIVIDAD 
+ * ***************************************************/ 
+precedence left NT_OR;
+precedence left NT_AND;
+precedence right NT_NOT;
+precedence left NT_LESS, NT_GREATER, NT_LESSQ, NT_GREATERQ, NT_EQUAL, NT_NOT_EQUAL;
+precedence left NT_PLUS, NT_MINUS;
+precedence left NT_TIMES, NT_DIVIDED, NT_MOD, NT_POT;
+precedence right NT_UMINUS;
+
+precedence left NT_O_PARENTHESES, NT_C_PARENTHESES;
+
+/* **************************************************
+ * PRODUCCIÓN INICIAL 
+ * ***************************************************/
+ start with begin;
+
+/* **************************************************
+ * PRODUCCIONES 
+ * ***************************************************/
+/* inicio */
+begin                   ::= list_sent:a
+                            {:
+                                ast = a;
+                            :};
+
+/* sentencias */
+list_sent               ::= list_sent:a sent:b endline
+                            {:
+                                RESULT = a;
+                                a.add(b);
+                            :}
+                          | sent:a endline
+                            {: 
+                                RESULT = new LinkedList<>();
+                                RESULT.add(a);
+                            :};
+
+endline                 ::= NT_SEMICOLON 
+                          | NT_JUMPLINE;
+
+sent                    ::= variable:a
+                            {:
+                                RETURN = a;
+                            :}
+                          | sent_if:a
+                            {:
+                                RETURN = a;
+                            :}
+                          | sent_switch:a
+                            {:
+                                RETURN = a;
+                            :}
+                          | sent_while:a
+                            {:
+                                RETURN = a;
+                            :}
+                          | sent_do:a
+                            {:
+                                RETURN = a;
+                            :}
+                          | sent_for:a
+                            {:
+                                RETURN = a;
+                            :}
+                          | NT_RETURN return:a
+                            {:
+                            :}
+                          | NT_BREAK
+                            {:
+                            :}
+                          | NT_CONTINUE
+                            {:
+                            :};
+
+/* variable */
+variable                ::= NT_ID:a tipo_declaracion:b
+                            {:
+                                if (b instanceof Declaration) {
+                                    RESULT = (Declaration) b;
+                                    RESULT.setId(a);
+                                } else if (b instanceof Ternary) {
+                                    RESULT = (Ternary) b;
+                                    RESULT.setId(a);
+                                } else if (b instanceof Function) {
+                                    RESULT = (Function) b;
+                                    RESULT.setId(a);
+                                } else {}
+                            :};
+
+tipo_declaracion        ::= NT_ASSIGN declaracion:a
+                            {:
+                                RESULT = a;
+                            :}
+                          | NT_O_CROTCHES asignacion:a
+                            {:
+                                RESULT = a;
+                            :};
+
+/* declaracion */
+declaracion             ::= expresion:a dec_e:b
+                            {:
+                                if (b == null) 
+                                    RESULT = new Declaration(a);
+                                else {
+                                    RESULT = (Ternary) b;
+                                    RESULT.setCondicion(a);
+                                }
+                            :}
+                          | NT_ID:a NT_O_PARENTHESES list_e:b NT_C_PARENTHESES
+                            {:
+                                RESULT = new Declaration();
+                                RESULT.setValues(b);
+                                if (a.equals("c"))
+                                    RESULT.setEstructura("vector");
+                                else if (a.equals("list"))
+                                    RESULT.setEstructura("lista");
+                            :} 
+                          | NT_FUNCTION NT_O_PARENTHESES params:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES
+                            {:
+                                RESTUL = new Function(a, b);
+                            :} 
+                          | NT_O_PARENTHESES params:a NT_C_PARENTHESES NT_ARROW NT_O_BRACES list_sent:b NT_C_BRACES
+                            {:
+                                RESTUL = new Function(a, b);
+                            :};
+
+dec_e                   ::= NT_C_QUESTION expresion:a NT_COLON expresion:b
+                            {:
+                                RESULT = new Ternary(a, b);
+                            :}
+                          | 
+                            {:
+                                RESULT = null;
+                            :};
+
+list_e                  ::= list_e:a NT_COMMA expresion:b
+                            {:
+                              RESULT = (LinkedList<Operation>) a;
+                              RESULT.add(b);
+                            :}
+                          | expresion:a
+                            {:
+                                RESULT = new LinkedList<Operation>();
+                                RESULT.add(a);
+                            :};
+
+params                  ::= list_param:a
+                            {:
+                                RESULT = a;
+                            :}
+                          | 
+                            {:
+                                RESTUL = new LinkedList<Declaration>();
+                            :};
+
+list_param              ::= list_param:a NT_COMMA param:b
+                            {:
+                                RESULT = (LinkedList<Declaration>) a;
+                                RESULT.add(b);
+                            :}
+                          | param:a
+                            {:
+                                RESULT = new LinkedList<Declaration>();
+                                RESULT.add(a);
+                            :};
+
+param                   ::= NT_ID:a asignar_param:b
+                            {:
+                                RESULT = new Declaration();
+                                RESULT.setId(a);
+                                if (b != null)
+                                    RESULT.setValue(b);
+                            :};
+
+asignar_param           ::= NT_ASSIGN expresion:a
+                            {:
+                                RESULT = a;
+                            :}
+                          | 
+                            {:
+                                RESULT = null;
+                            :};
+
+/* asignacion */
+asignacion              ::= acceso:a NT_ASSIGN expresion:b
+                            {:
+                            :};
+
+/* acceso */
+acceso                  ::= expresion:a acceso_e:b
+                            {:
+                            :}
+                          | NT_O_CROTCHES expresion:a NT_C_CROTCHES vecs:b
+                            {:
+                            :} 
+                          | NT_COMMA expresion:a NT_C_CROTCHES
+                            {:
+                            :};
+
+acceso_e                ::= NT_C_CROTCHES vecs:a
+                            {:
+                            :}
+                          | NT_COMMA acceso_coma:a
+                            {:
+                            :};
+
+acceso_coma             ::= expresion:a NT_C_CROTCHES
+                            {:
+                            :}
+                          | NT_C_CROTCHES
+                            {:
+                            :};
+
+vecs                   ::= list_vec:a
+                            {:
+                            :}
+                          | 
+                            {:
+                            :};
+
+list_vec                ::= list_vec:a vec:b
+                            {:
+                            :}
+                          | vec:a
+                            {:
+                            :};
+
+vec                     ::= NT_O_CROTCHES expresion:a NT_C_CROTCHES
+                            {:
+                            :}
+                          | NT_DBO_CROTCHES expresion:a NT_DBC_CROTCHES
+                            {:
+                            :};
+
+/* expresion */
+expresion              ::= expresion:a NT_PLUS:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.SUMA, a, b, aleft, aright);
+                            :}    
+                          | expresion:a NT_MINUS:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.RESTA, aleft, bright);
+                            :}    
+                          | expresion:a NT_TIMES:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.MULTIPLICACION, aleft, bright);
+                            :}    
+                          | expresion:a NT_DIVIDED:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.DIVISION, aleft, bright);
+                            :}    
+                          | expresion:a NT_MOD:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.MODULO, aleft, bright);
+                            :}    
+                          | expresion:a NT_POT:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.POTENCIA, aleft, bright);
+                            :}    
+                          | expresion:a NT_LESS:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.MENOR, aleft, bright);
+                            :}    
+                          | expresion:a NT_GREATER:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.MAYOR, aleft, bright);
+                            :}    
+                          | expresion:a NT_LESSQ:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.MENOR_IGUAL, aleft, bright);
+                            :}    
+                          | expresion:a NT_GREATERQ:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.MAYOR_IGUAL, aleft, bright);
+                            :}    
+                          | expresion:a NT_EQUAL:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.IGUAL, aleft, bright);
+                            :}    
+                          | expresion:a NT_NOT_EQUAL:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.DIFERENTE, aleft, bright);
+                            :}    
+                          | expresion:a NT_OR:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.OR, aleft, bright);
+                            :}    
+                          | expresion:a NT_AND:b expresion:c 
+                            {:
+                                RESULT = new Operation(Operation.Type.AND, a, c, bleft, bright);
+                            :}    
+                          | NT_NOT:a expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.NOT, b, aleft, aright);
+                            :}
+                          | NT_MINUS:a expresion:b 
+                            {:
+                                RESULT = new Operation(Operation.Type.NEGATIVO, b, aleft, aright);
+                            :} %prec NT_UMINUS
+                          | NT_ID:a invocar:b
+                            {:
+                            :} 
+                          | NT_NUMBER:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.NUMERO, a, aleft, aright);
+                            :} 
+                          | NT_STRING:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.CADENA, a, aleft, aright);
+                            :} 
+                          | NT_DOUBLE:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.DECIMAL, a, aleft, aright);
+                            :} 
+                          | NT_TRUE:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.TRUE, true, aleft, aright);
+                            :} 
+                          | NT_FALSE:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.FALSE, false, aleft, aright);
+                            :}
+                          | NT_NULL:a 
+                            {:
+                                RESULT = new Operation(Operation.Type.NULL, null, aleft, aright);
+                            :};
+
+/* invocar */
+invocar                  ::= NT_O_PARENTHESES args NT_C_PARENTHESES
+                            {:
+                            :}
+                           | NT_O_CROTCHES acceso
+                            {:
+                            :} 
+                           |
+                            {:
+                            :};
+
+args                    ::= list_arg
+                            {:
+                            :}
+                          | 
+                            {:
+                            :};
+
+list_arg                ::= list_arg NT_COMMA arg
+                            {:
+                            :}
+                          | arg
+                            {:
+                            :};
+
+arg                     ::= expresion
+                            {:
+                            :}
+                          | NT_DEFAULT
+                            {:
+                            :};
+
+/* IF */
+sent_if                 ::= NT_IF NT_O_PARENTHESES expresion:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES
+                            {:
+                                SentIf sentIf = new SentIf(
+                                    new SubIf(a, b)
+                                );
+                                RESULT = sentIf;
+                            :}
+                          | NT_IF NT_O_PARENTHESES expresion:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES list_elseif:c
+                            {:
+                                SentIf sentIf = new SentIf(
+                                    new SubIf(a, b), 
+                                    c
+                                );
+                                RESULT = sentIf;
+                            :} 
+                          | NT_IF NT_O_PARENTHESES expresion:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES list_elseif:c sent_else:d
+                            {:
+                                SentIf sentIf = new SentIf(
+                                    new SubIf(a, b), 
+                                    c, 
+                                    d
+                                );
+                                RESULT = sentIf;
+                            :} 
+                          | NT_IF NT_O_PARENTHESES expresion:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES sent_else:c
+                            {:
+                                SentIf sentIf = new SentIf(
+                                    new SubIf(a, b), 
+                                    c
+                                );
+                                RESULT = sentIf;
+                            :};
+
+list_elseif             ::= list_elseif:a sent_elseif:b
+                            {:
+                                LinkedList<SubIf> elseif = a;
+                                elseif.add(b);
+                                RESULT = elseif;
+                            :}
+                          | sent_elseif:a
+                            {:
+                                LinkedList<SubIf> elseif = new LinkedList<>();
+                                elseif.add(a);
+                                RESULT = elseif;
+                            :};
+
+sent_elseif             ::= NT_ELSE:c NT_IF NT_O_PARENTHESES expresion:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES
+                            {: RESULT = new SubIf(a, b, cleft, cright); :};
+
+sent_else               ::= NT_ELSE:b NT_O_BRACES list_sent:a NT_C_BRACES
+                            {: RESULT = new SubIf(a, bleft, bright); :};
+
+/* SWITCH */
+sent_switch             ::= NT_SWITCH NT_O_PARENTHESES expresion:a NT_C_PARENTHESES list_case:b case_default:c
+                            {:
+                                SentSwitch sentSwitch = new SentSwitch(a, b, c);
+                                RESULT = sentSwitch;
+                            :};
+
+list_case               ::= list_case:a sub_case:b
+                            {:
+                                LinkedList<SubSwitch> listCase = a;
+                                listCase.add(b);
+                                RESULT = listCase;
+                            :}    
+                          | sub_case:a
+                            {:
+                                RESULT = new LinkedList<>();
+                                RESULT.add(a);
+                            :};
+
+sub_case                ::= NT_CASE:c expresion:a NT_COLON list_sent:b
+                            {:
+                                SubSwitch subSwitch = new SubSwitch(a, b, cleft, cright);
+                                RESULT = subSwitch;
+                            :};
+
+case_default            ::= NT_DEFAULT:b NT_COLON list_sent:a
+                            {:
+                                SubSwitch subSwitch = new SubSwitch(a, bleft, bright);
+                                RESULT = subSwitch;
+                            :};
+
+/* WHILE */
+sent_while              ::= NT_WHILE:c NT_O_PARENTHESES expresion:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES
+                            {:
+                                SentWhile sentWhile = new SentWhile(a, b, cleft, cright);
+                                RESULT = sentWhile;
+                            :};
+
+/* DO */
+sent_do                 ::= NT_DO:c NT_O_BRACES list_sent:a NT_C_BRACES NT_WHILE NT_O_BRACES expresion:b NT_C_BRACES
+                            {:
+                                SentDo sentDo = new SentDo(b, a, cleft, cright);
+                                RESULT = sentDo;
+                            :};
+
+/* FOR */
+sent_for                ::= NT_FOR NT_O_PARENTHESES NT_ID:a NT_IN expresion:b NT_C_PARENTHESES NT_O_BRACES list_sent:c NT_C_BRACES
+                            {:
+                                SentFor sentFor = new SentFor();
+                                RESULT = sentFor;
+                            :};
+
+/* return */
+return                  ::= expresion:a
+                            {: RESULT = a; :} 
+                          | {: RESULT = null; :};
