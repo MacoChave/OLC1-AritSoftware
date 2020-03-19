@@ -145,7 +145,10 @@ variable                ::= NT_ID:a tipo_declaracion:b
                                 } else if (b instanceof Function) {
                                     RESULT = (Function) b;
                                     RESULT.setId(a);
-                                } else {}
+                                } else if (b instanceof Assign) {
+                                    RESULT = (Assign) b;
+                                    RESULT.setId(a);
+                                }
                             :};
 
 tipo_declaracion        ::= NT_ASSIGN declaracion:a
@@ -178,11 +181,11 @@ declaracion             ::= expresion:a dec_e:b
                             :} 
                           | NT_FUNCTION NT_O_PARENTHESES params:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES
                             {:
-                                RESTUL = new Function(a, b);
+                                RESULT = new CallStruct(a, (LinkedList<Vector>) b) = new Function(a, b);
                             :} 
                           | NT_O_PARENTHESES params:a NT_C_PARENTHESES NT_ARROW NT_O_BRACES list_sent:b NT_C_BRACES
                             {:
-                                RESTUL = new Function(a, b);
+                                RESULT = new CallStruct(a, (LinkedList<Vector>) b) = new Function(a, b);
                             :};
 
 dec_e                   ::= NT_C_QUESTION expresion:a NT_COLON expresion:b
@@ -211,7 +214,7 @@ params                  ::= list_param:a
                             :}
                           | 
                             {:
-                                RESTUL = new LinkedList<Declaration>();
+                                RESULT = new CallStruct(a, (LinkedList<Vector>) b) = new LinkedList<Declaration>();
                             :};
 
 list_param              ::= list_param:a NT_COMMA param:b
@@ -245,52 +248,87 @@ asignar_param           ::= NT_ASSIGN expresion:a
 /* asignacion */
 asignacion              ::= acceso:a NT_ASSIGN expresion:b
                             {:
+                                RESULT = new Assign();
+                                if (a instanceof Coordenate) 
+                                    RESULT.setCoordenate(a);
+                                else 
+                                    RESULT.setVector(a);
                             :};
 
 /* acceso */
 acceso                  ::= expresion:a acceso_e:b
                             {:
+                                if (b instanceof Coordenate) {
+                                    RESULT = (Coordenate) b;
+                                    RESULT.setX(a);
+                                } else {
+                                    RESULT = (LinkedList<Vector>) b;
+                                    RESULT.add(new Vector(a, 'v'));
+                                }
                             :}
                           | NT_O_CROTCHES expresion:a NT_C_CROTCHES vecs:b
                             {:
+                                RESULT = (LinkedList<Vector>) b;
+                                RESULT.add(new Vector(a, 'c'))
                             :} 
                           | NT_COMMA expresion:a NT_C_CROTCHES
                             {:
+                                RESULT = new Coordenate();
+                                RESULT.setY(a);
                             :};
 
 acceso_e                ::= NT_C_CROTCHES vecs:a
                             {:
+                                RESULT = (LinkedList<Vector>) a;
                             :}
                           | NT_COMMA acceso_coma:a
                             {:
+                                RESULT = (Coordenate) a;
                             :};
 
 acceso_coma             ::= expresion:a NT_C_CROTCHES
                             {:
+                                RESULT = new Coordenate();
+                                RESULT.setY(a);
                             :}
                           | NT_C_CROTCHES
                             {:
+                                RESULT = new Coordenate();
+                                RESULT.setY(null);
                             :};
 
 vecs                   ::= list_vec:a
                             {:
+                                RESULT = (LinkedList<Vector>) a;
                             :}
                           | 
                             {:
+                                RESULT = new LinkedList<Vector>();
                             :};
 
 list_vec                ::= list_vec:a vec:b
                             {:
+                                RESULT = (LinkedList<Vector>) a;
+                                RESULT.add(b);
                             :}
                           | vec:a
                             {:
+                                RESULT = new LinkedList<Vector>();
+                                RESULT.add(vec);
                             :};
 
 vec                     ::= NT_O_CROTCHES expresion:a NT_C_CROTCHES
                             {:
-                            :}
-                          | NT_DBO_CROTCHES expresion:a NT_DBC_CROTCHES
+                                RESULT = a;
+                            :};
+                        
+type_vec                ::= NT_O_CROTCHES expresion:a NT_C_CROTCHES
                             {:
+                                RESULT = new Vector(a, 'c');
+                            :}
+                          | expresion:a 
+                            {:
+                                RESULT = new Vector(a, 'v');
                             :};
 
 /* expresion */
@@ -360,6 +398,19 @@ expresion              ::= expresion:a NT_PLUS:b expresion:c
                             :} %prec NT_UMINUS
                           | NT_ID:a invocar:b
                             {:
+                                // (LinkedList<Operation>) (Coordenate | LinkedList<Vector>) (null)
+                                if (b == null) 
+                                    RESULT = new Operation(Operation.Type.ID, a, aleft, aright);
+                                else if (b instanceof Coordenate) {
+                                    // new CallStruct(a, b)
+                                    RESULT = new CallStruct(a, (Coordenate) b);
+                                } else if (b instanceof LinkedList<Vector>) {
+                                    // mew CallStruct(a, b)
+                                    RESULT = new CallStruct(a, (LinkedList<Vector>) b);
+                                } else {
+                                    // new CallMethod(a, b)
+                                    RESULT = new CallMethod()
+                                }
                             :} 
                           | NT_NUMBER:a 
                             {:
@@ -387,14 +438,16 @@ expresion              ::= expresion:a NT_PLUS:b expresion:c
                             :};
 
 /* invocar */
-invocar                  ::= NT_O_PARENTHESES args NT_C_PARENTHESES
+invocar                  ::= NT_O_PARENTHESES args:a NT_C_PARENTHESES
                             {:
                             :}
-                           | NT_O_CROTCHES acceso
+                           | NT_O_CROTCHES acceso:a
                             {:
+                                RESULT = a;
                             :} 
                            |
                             {:
+                                RESULT = null;
                             :};
 
 args                    ::= list_arg
@@ -517,9 +570,9 @@ sent_do                 ::= NT_DO:c NT_O_BRACES list_sent:a NT_C_BRACES NT_WHILE
                             :};
 
 /* FOR */
-sent_for                ::= NT_FOR NT_O_PARENTHESES NT_ID:a NT_IN expresion:b NT_C_PARENTHESES NT_O_BRACES list_sent:c NT_C_BRACES
+sent_for                ::= NT_FOR:d NT_O_PARENTHESES NT_ID:a NT_IN expresion:b NT_C_PARENTHESES NT_O_BRACES list_sent:c NT_C_BRACES
                             {:
-                                SentFor sentFor = new SentFor();
+                                SentFor sentFor = new SentFor(a, b, c, dleft, dright);
                                 RESULT = sentFor;
                             :};
 

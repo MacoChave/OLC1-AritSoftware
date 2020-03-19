@@ -4,12 +4,14 @@ import java.util.LinkedList;
 
 public class SentFor implements Instruction {
 
-    private final Operation iterador;
-    private final LinkedList<Instruction> instructions;
+    private Operation iterador;
+    private Instruction instruction;
+    private LinkedList<Instruction> instructions;
     private int column, row;
 
-    public SentFor(Operation iterador, LinkedList<Instruction> instructions, int row, int column) {
+    public SentFor(Operation iterador, Instruction instruction, LinkedList<Instruction> instructions, int row, int column) {
         this.iterador = iterador;
+        this.instruction = instruction;
         this.instructions = instructions;
         this.row = row;
         this.column = column;

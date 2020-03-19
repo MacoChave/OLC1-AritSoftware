@@ -63,8 +63,8 @@ blockComment    = "#*" ~ "*#"
     "]"                 { return symbol(sym.NT_C_CROTCHES, yytext()); }
     "[["                { return symbol(sym.NT_DBO_CROTCHES, yytext()); }
     "]]"                { return symbol(sym.NT_DBC_CROTCHES, yytext()); }
-    "("                 { return symbol(sym.NT_O_PARENTHESOS, yytext()); }
-    ")"                 { return symbol(sym.NT_C_PARENTHESOS, yytext()); }
+    "("                 { return symbol(sym.NT_O_PARENTHESES, yytext()); }
+    ")"                 { return symbol(sym.NT_C_PARENTHESES, yytext()); }
     "{"                 { return symbol(sym.NT_O_BRACES, yytext()); }
     "}"                 { return symbol(sym.NT_C_BRACES, yytext()); }
     "!"                 { return symbol(sym.NT_NOT, yytext()); }
