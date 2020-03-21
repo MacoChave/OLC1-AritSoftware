@@ -123,14 +123,17 @@ sent                    ::= variable:a
                             {:
                                 RETURN = a;
                             :}
-                          | NT_RETURN return:a
+                          | NT_RETURN:b NT_O_PARENTHESES return:a NT_C_PARENTHESES
                             {:
+                                RETURN = new Retorno(bleft, bright, a);
                             :}
-                          | NT_BREAK
+                          | NT_BREAK:a
                             {:
+                                RETURN = new Control(aleft, aright, 'break');
                             :}
-                          | NT_CONTINUE
+                          | NT_CONTINUE:a
                             {:
+                                RETURN = new Control(aleft, aright, 'continue');
                             :};
 
 /* variable */
@@ -148,6 +151,8 @@ variable                ::= NT_ID:a tipo_declaracion:b
                                 } else if (b instanceof Assign) {
                                     RESULT = (Assign) b;
                                     RESULT.setId(a);
+                                } else {
+                                    RESULT = new CallMethod(a, b);
                                 }
                             :};
 
@@ -156,6 +161,10 @@ tipo_declaracion        ::= NT_ASSIGN declaracion:a
                                 RESULT = a;
                             :}
                           | NT_O_CROTCHES asignacion:a
+                            {:
+                                RESULT = a;
+                            :}
+                          | NT_O_PARENTHESES args:a NT_C_PARENTHESES
                             {:
                                 RESULT = a;
                             :};
@@ -178,6 +187,10 @@ declaracion             ::= expresion:a dec_e:b
                                     RESULT.setEstructura("vector");
                                 else if (a.equals("list"))
                                     RESULT.setEstructura("lista");
+                                else if (a.equals("matrix"))
+                                    RESULT.setEstructura("matrix");
+                                else if (a.equals("array"))
+                                    RESULT.setEstructura("array");
                             :} 
                           | NT_FUNCTION NT_O_PARENTHESES params:a NT_C_PARENTHESES NT_O_BRACES list_sent:b NT_C_BRACES
                             {:
@@ -409,7 +422,7 @@ expresion              ::= expresion:a NT_PLUS:b expresion:c
                                     RESULT = new CallStruct(a, (LinkedList<Vector>) b);
                                 } else {
                                     // new CallMethod(a, b)
-                                    RESULT = new CallMethod()
+                                    RESULT = new CallMethod(a, b);
                                 }
                             :} 
                           | NT_NUMBER:a 
@@ -440,6 +453,7 @@ expresion              ::= expresion:a NT_PLUS:b expresion:c
 /* invocar */
 invocar                  ::= NT_O_PARENTHESES args:a NT_C_PARENTHESES
                             {:
+                                RESULT = a;
                             :}
                            | NT_O_CROTCHES acceso:a
                             {:
@@ -450,25 +464,33 @@ invocar                  ::= NT_O_PARENTHESES args:a NT_C_PARENTHESES
                                 RESULT = null;
                             :};
 
-args                    ::= list_arg
+args                    ::= list_arg:a
                             {:
+                                RESULT = a;
                             :}
                           | 
                             {:
+                                RESULT = new LinkedList<Operation>();
                             :};
 
-list_arg                ::= list_arg NT_COMMA arg
+list_arg                ::= list_arg:a NT_COMMA:b arg
                             {:
+                                RESULT = (LinkedList<Operation>) a;
+                                RESULT.add(b);
                             :}
-                          | arg
+                          | arg:a
                             {:
+                                RESULT = new LinkedList<Operation>();
+                                RESULT.add(a);
                             :};
 
-arg                     ::= expresion
+arg                     ::= expresion:a
                             {:
+                                RESULT = a;
                             :}
-                          | NT_DEFAULT
+                          | NT_DEFAULT:a
                             {:
+                                RESULT = new Operation(Operation.Type.DEFAULT, aleft, aright);
                             :};
 
 /* IF */
@@ -572,7 +594,9 @@ sent_do                 ::= NT_DO:c NT_O_BRACES list_sent:a NT_C_BRACES NT_WHILE
 /* FOR */
 sent_for                ::= NT_FOR:d NT_O_PARENTHESES NT_ID:a NT_IN expresion:b NT_C_PARENTHESES NT_O_BRACES list_sent:c NT_C_BRACES
                             {:
-                                SentFor sentFor = new SentFor(a, b, c, dleft, dright);
+                                Declaration it = new Declaration();
+                                it.setId(a);
+                                SentFor sentFor = new SentFor(it, b, c, dleft, dright);
                                 RESULT = sentFor;
                             :};
 

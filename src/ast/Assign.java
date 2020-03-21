@@ -75,7 +75,7 @@ public class Assign implements Instruction {
         for (Operation operation : values) {
             if (symbols.getValue(id) == null)
                 symbols.add(new Symbol(id));
-             symbols.setValue(id, operation.execute(symbols));
+            symbols.setValue(id, operation.execute(symbols));
         }
         return null;
     }

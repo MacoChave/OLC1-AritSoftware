@@ -4,14 +4,14 @@ import java.util.LinkedList;
 
 public class SentFor implements Instruction {
 
-    private Operation iterador;
-    private Instruction instruction;
+    private Declaration iterador;
+    private Operation operation;
     private LinkedList<Instruction> instructions;
     private int column, row;
 
-    public SentFor(Operation iterador, Instruction instruction, LinkedList<Instruction> instructions, int row, int column) {
+    public SentFor(Declaration iterador, Operation operation, LinkedList<Instruction> instructions, int row, int column) {
         this.iterador = iterador;
-        this.instruction = instruction;
+        this.operation = operation;
         this.instructions = instructions;
         this.row = row;
         this.column = column;
@@ -19,10 +19,20 @@ public class SentFor implements Instruction {
 
     @Override
     public Object execute(SymbolTable symbols) {
+        SymbolTable localSymbol = new SymbolTable();
+        localSymbol.addAll(symbols);
+        iterador.execute(localSymbol);
+        
         for (Instruction instruction : this.instructions) {
-            SymbolTable localSymbol = new SymbolTable();
-            localSymbol.addAll(symbols);
-            instruction.execute(localSymbol);
+            Object result = instruction.execute(localSymbol);
+            
+            if (result != null && result instanceof Control) {
+                if (result == Symbol.Control.BREAK) return null;
+                if (result == Symbol.Control.CONTINUE) continue;
+            }
+
+            if (result != null)
+                return result;
         }
         return null;
     }

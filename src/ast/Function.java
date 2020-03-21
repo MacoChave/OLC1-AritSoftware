@@ -42,7 +42,16 @@ public class Function implements Instruction {
         }
         
         for (Instruction instruction : sentencias) {
-            instruction.execute(localSymbols);
+			Object result = instruction.execute(localSymbols);
+			
+            if (result != null && result instanceof Control) {
+                if (result == Symbol.Control.BREAK || result == Symbol.Control.CONTINUE) {
+					//Todo: ERROR SEMANTICO
+				}
+            }
+            
+            if (result != null)
+                return result;
         }
 
 		return null;

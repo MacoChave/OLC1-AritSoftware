@@ -21,7 +21,15 @@ public class SentDo implements Instruction {
             SymbolTable localSymbol = new SymbolTable();
             localSymbol.addAll(symbols);
             for (Instruction instruction : instructions) {
-                instruction.execute(localSymbol);
+                Object result = instruction.execute(localSymbol);
+                
+                if (result != null && result instanceof Control) {
+                    if (result == Symbol.Control.BREAK) return null;
+                    if (result == Symbol.Control.CONTINUE) continue;
+                }
+
+                if (result != null)
+                    return result;
             }
         } while ((Boolean) condition.execute(symbols));
         return null;

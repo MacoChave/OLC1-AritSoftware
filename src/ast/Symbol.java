@@ -1,19 +1,25 @@
 package ast;
 
+import java.util.LinkedList;
+
+import tad.Value;
+
 public class Symbol {
 
     private final String id;
     private Primitivo primitivo;
     private Estructura estructura;
-    private Object value;
+    private LinkedList<Value> values;
+    private int x, y, z;
 
-    public Symbol(Primitivo primitivo, Estructura estructura, String id) {
-        this.primitivo = primitivo;
+    public Symbol(Estructura estructura, String id, LinkedList<Value> values) {
         this.id = id;
-        this.estructura = estructura;
+        this.estructura = recalcularEstructura();
+        this.values = new LinkedList<>();
+        this.values.addAll(values);
     }
 
-    public Symbol(String id) {
+	public Symbol(String id) {
         this.id = id;
     }
 
@@ -21,12 +27,31 @@ public class Symbol {
         return id;
     }
 
-    public Object getValue() {
-        return value;
+    public Object getValue(int index) {
+        return values.get(index);
     }
 
-    public void setValue(Object value) {
-        this.value = value;
+    public void setValue(int index, Value element) {
+        this.values.set(index, element);
+        // calcularPrimitivo();
+    }
+
+    public void setDimension(int x, int y, int z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public int getZ() {
+        return z;
     }
 
     public static enum Primitivo {
@@ -42,4 +67,28 @@ public class Symbol {
         MATRIZ,
         ARRAY
     }
+
+    public static enum Control {
+        DEFAULT, 
+        CONTINUE, 
+        BREAK, 
+        RETURN
+    }
+
+    private Estructura recalcularEstructura() {
+        if (estructura == Estructura.VECTOR) {
+            Primitivo aux = values.getFirst().getPrimitivo();
+            for (Value value : values) {
+                if (value.getPrimitivo() != aux) return Estructura.LISTA;
+            }
+            this.primitivo = aux;
+            return estructura;
+        }
+        return estructura;
+    }
+    
+    // private Primitivo calcularPrimitivo() {
+        
+    // }
+
 }

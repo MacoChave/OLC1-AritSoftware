@@ -2,27 +2,25 @@ package ast;
 
 import java.util.LinkedList;
 
+import tad.Value;
+
 public class Declaration implements Instruction {
 
     private String id;
-    Symbol.Primitivo primitivo;
     Symbol.Estructura estructura;
-    LinkedList<Operation> values;
+    LinkedList<Operation> operations;
     int column, row;
-    Operation x, y, z;
 
     public Declaration() {
-        this.values = new LinkedList<>();
+        this.operations = new LinkedList<>();
         this.estructura = Symbol.Estructura.VECTOR;
-        this.primitivo = Symbol.Primitivo.CADENA;
     }
 
     /* DECLARACION DE UN VECTOR DE UN VALOR */
-    public Declaration(Operation value) {
-        this.values = new LinkedList<>();
-        this.values.add(value);
+    public Declaration(Operation operation) {
+        this.operations = new LinkedList<>();
+        this.operations.add(operation);
         this.estructura = Symbol.Estructura.VECTOR;
-        this.primitivo = Symbol.Primitivo.CADENA;
     }
     
 	public String getId() {
@@ -52,35 +50,16 @@ public class Declaration implements Instruction {
 
     public Symbol.Estructura getEstructura() { return this.estructura; }
 
-    public void setPrimitivo(String primitivo) {
-        switch (primitivo.toLowerCase()) {
-            case "number":
-                this.primitivo = Symbol.Primitivo.NUMERO;
-                break;
-            case "string":
-                this.primitivo = Symbol.Primitivo.CADENA;
-                break;
-            case "double":
-                this.primitivo = Symbol.Primitivo.FLOTANTE;
-                break;
-            case "boolean":
-                this.primitivo = Symbol.Primitivo.BOOLEANO;
-                break;
-        }
+    public void setValue(Operation operation) {
+        this.operations.add(operation);
     }
 
-    public Symbol.Primitivo getPrimitivo() { return this.primitivo; }
-
-    public void setValue(Operation value) {
-        this.values.add(value);
-    }
-
-    public void setValues(LinkedList<Operation> values) {
-        this.values.addAll(values);
+    public void setValues(LinkedList<Operation> operations) {
+        this.operations.addAll(operations);
     }
 
 	public LinkedList<Operation> getValues() {
-		return values;
+		return operations;
 	}
 
 	public int getColumn() {
@@ -99,34 +78,22 @@ public class Declaration implements Instruction {
 		this.row = row;
 	}
 
-	public Operation getX() {
-		return this.x;
-	}
-
-	public void setX(Operation x) {
-		this.x = x;
-	}
-
-	public Operation getY() {
-		return this.y;
-	}
-
-	public void setY(Operation y) {
-		this.y = y;
-	}
-
-	public Operation getZ() {
-		return this.z;
-	}
-
-	public void setZ(Operation z) {
-		this.z = z;
-	}
-
     @Override
     public Object execute(SymbolTable symbols) {
-        symbols.add(new Symbol(this.primitivo, this.estructura, this.id));
+        LinkedList<Value> values = operationToValue(symbols);
+        Symbol symbol = new Symbol(this.estructura, this.id, values);
+        symbols.add(symbol);
         return null;
+    }
+
+    private LinkedList<Value> operationToValue(SymbolTable symbols) {
+        LinkedList<Value> values = new LinkedList<>();
+        
+        for (Operation operation : operations) {
+            values.add(new Value(operation.execute(symbols)));
+        }
+
+        return values;
     }
 
 }

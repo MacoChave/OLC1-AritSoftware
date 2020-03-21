@@ -41,7 +41,7 @@ public class Coordenate implements Instruction {
         
         //Todo: Error semántico
 
-        return (coordenates[0] >= 0 && coordenates[1] >= 0) ? coordenates : null;
+        return (coordenates[0] >= 0 || coordenates[1] >= 0) ? coordenates : null;
 	}
 
 }

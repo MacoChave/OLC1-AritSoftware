@@ -8,7 +8,10 @@ public class Vector implements Instruction {
     private Operation index;
     private Type type;
 
-    
+	/**
+	 * VALOR: V DENTRO DE LISTA
+	 * CONTENIDO: C PRIMITIVO
+	 */
     enum Type {
         VALOR, CONTENIDO
     }

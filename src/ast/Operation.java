@@ -26,7 +26,8 @@ public class Operation implements Instruction {
         AND,
         OR,
         PARENTESIS,
-        NULL
+        NULL, 
+        DEFAULT
     }
 
     private final Type type;
@@ -80,11 +81,21 @@ public class Operation implements Instruction {
         this.column = column;
     }
 
+    public Operation(Type type, int row, int column) {
+        this.type = type;
+        this.row = row;
+        this.column = column;
+    }
+
     @Override
     public Object execute(SymbolTable symbols) {
 
+        if (this.type == Type.DEFAULT) return new Control(this.row, this.column, "default");
+
         Object leftValue = (left == null) ? null : left.execute(symbols);
         Object rightValue = (right == null) ? null : right.execute(symbols);
+
+        if (leftValue == null) return null;
 
         if (type == Type.SUMA) {
             if (leftValue instanceof Double && rightValue instanceof Double)

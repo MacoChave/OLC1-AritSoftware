@@ -37,9 +37,12 @@ public class SentIf implements Instruction {
     @Override
     public Object execute(SymbolTable symbols) {
         for (Instruction instruction : this.list_if) {
-            instruction.execute(symbols);
+            Object result = instruction.execute(symbols);
             if (((SubIf)instruction).getConditionResult())
                 return null;
+                        
+            if (result != null)
+                return result;
         }
         return null;
     }

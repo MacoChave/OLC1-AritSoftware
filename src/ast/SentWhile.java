@@ -21,7 +21,15 @@ public class SentWhile implements Instruction {
             SymbolTable localSymbols = new SymbolTable();
             localSymbols.addAll(symbols);
             for (Instruction instruction : instructions) {
-                instruction.execute(localSymbols);
+                Object result = instruction.execute(localSymbols);
+                
+                if (result != null && result instanceof Control) {
+                    if (result == Symbol.Control.BREAK) return null;
+                    if (result == Symbol.Control.CONTINUE) continue;
+                }
+                
+                if (result != null)
+                    return result;
             }
         }
         return null;

@@ -20,8 +20,16 @@ public class SentSwitch implements Instruction {
         localSymbol.addAll(symbols);
         for (Instruction instruction : this.list_case) {
             ((SubSwitch) instruction).setEvaluate(evaluate);
-            instruction.execute(localSymbol);
+            Object result = instruction.execute(localSymbol);
             if (((SubSwitch) instruction).getIsTrueCond()) return null;
+            
+            if (result != null && result instanceof Control) {
+                if (result == Symbol.Control.BREAK) return null;
+                if (result == Symbol.Control.CONTINUE) continue;
+            }
+            
+            if (result != null)
+                return result;
         }
         return null;
     }
